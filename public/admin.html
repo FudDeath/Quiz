@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - MCQ Quiz Application</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <h1>Admin Panel</h1>
+        <div id="admin-container">
+            <h2>Manage Questions</h2>
+            <div id="question-list"></div>
+            <button id="add-question-btn">Add New Question</button>
+
+            <h2>Quiz Statistics</h2>
+            <div id="quiz-stats"></div>
+
+            <h2>Secret Key Management</h2>
+            <button onclick="updateSecretKey()">Update Secret Key</button>
+        </div>
+    </div>
+    <script src="admin.js"></script>
+</body>
+</html>
