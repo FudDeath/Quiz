@@ -5,7 +5,6 @@ const { Pool } = require("pg");
 const auth = require("basic-auth");
 
 const app = express();
-const port = 8000;
 
 // Create a new PostgreSQL connection pool
 let pool;
