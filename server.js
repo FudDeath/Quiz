@@ -110,16 +110,10 @@ app.get("/admin", authenticate, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
-app.delete("/api/admin/clear-quiz-stats", authenticate, async (req, res) => {
-  try {
-    await pool.query("DELETE FROM quiz_results");
-    console.log("Quiz statistics cleared successfully");
-    res.json({ message: "Quiz statistics cleared successfully" });
-  } catch (error) {
-    console.error("Error clearing quiz statistics:", error);
-    res.status(500).json({ error: "An error occurred while clearing quiz statistics." });
-  }
-});
+// Apply authentication to admin routes
+app.use("/api/questions", authenticate);
+app.use("/api/quiz-stats", authenticate);
+app.use("/api/update-secret-key", authenticate);
 
 // API endpoint for secret key
 app.post("/api/secret-key", async (req, res) => {
@@ -186,16 +180,96 @@ app.get("/api/questions", async (req, res) => {
   }
 });
 
+// API endpoint to get a single question
+app.get("/api/questions/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query("SELECT * FROM questions WHERE id = $1", [
+      id,
+    ]);
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Question not found" });
+    } else {
+      res.json(result.rows[0]);
+    }
+  } catch (error) {
+    console.error("Error fetching question:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while fetching the question." });
+  }
+});
+
+// API endpoint to add a new question
+app.post("/api/questions", async (req, res) => {
+  const { question, options, correct_answer } = req.body;
+  try {
+    const result = await pool.query(
+      "INSERT INTO questions (question, options, correct_answer) VALUES ($1, $2, $3) RETURNING *",
+      [question, options, correct_answer],
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error("Error adding question:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while adding the question." });
+  }
+});
+
+// API endpoint to update a question
+app.put("/api/questions/:id", async (req, res) => {
+  const { id } = req.params;
+  const { question, options, correct_answer } = req.body;
+  try {
+    const result = await pool.query(
+      "UPDATE questions SET question = $1, options = $2, correct_answer = $3 WHERE id = $4 RETURNING *",
+      [question, options, correct_answer, id],
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Question not found" });
+    } else {
+      res.json(result.rows[0]);
+    }
+  } catch (error) {
+    console.error("Error updating question:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while updating the question." });
+  }
+});
+
+// API endpoint to delete a question
+app.delete("/api/questions/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "DELETE FROM questions WHERE id = $1 RETURNING *",
+      [id],
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Question not found" });
+    } else {
+      res.json({ message: "Question deleted successfully" });
+    }
+  } catch (error) {
+    console.error("Error deleting question:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while deleting the question." });
+  }
+});
+
 // API endpoint to get quiz statistics
 app.get("/api/quiz-stats", async (req, res) => {
   try {
     const totalQuizzes = await pool.query("SELECT COUNT(*) FROM quiz_results");
     const averageScore = await pool.query(
-      "SELECT AVG(score) / 7 AS avg FROM quiz_results"
+      "SELECT AVG(score) FROM quiz_results",
     );
     res.json({
       totalQuizzes: parseInt(totalQuizzes.rows[0].count),
-      averageScore: parseFloat(averageScore.rows[0].avg) * 100, // Convert to percentage
+      averageScore: parseFloat(averageScore.rows[0].avg),
     });
   } catch (error) {
     console.error("Error fetching quiz stats:", error);
@@ -205,6 +279,7 @@ app.get("/api/quiz-stats", async (req, res) => {
   }
 });
 
-// Export the app for Vercel to handle
-module.exports = app;
-
+// Start the server
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Server running at http://0.0.0.0:${port}`);
+});
