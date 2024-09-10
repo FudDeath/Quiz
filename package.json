@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "api/server.js",
   "scripts": {
-    "vercel-build": "npm run build"
+    "start": "node api/server.js"
   },
   "keywords": [],
   "author": "",
