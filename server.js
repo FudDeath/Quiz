@@ -77,21 +77,13 @@ async function ensureCorrectSecretKey() {
   }
 }
 
-// Initialize the database
 initDatabase()
   .then(() => ensureCorrectSecretKey())
   .catch(console.error);
 
-// Authentication middleware for admin
+// Authentication middleware
 function authenticate(req, res, next) {
   const credentials = auth(req);
-  console.log("Attempted access to /admin"); // Log each time the /admin route is accessed
-  if (!credentials) {
-    console.log("No credentials provided"); // Log if no credentials are provided
-  } else {
-    console.log(`Credentials provided: ${credentials.name}, ${credentials.pass}`); // Log the provided credentials
-  }
-
   if (
     !credentials ||
     credentials.name !== "admin" ||
@@ -101,12 +93,11 @@ function authenticate(req, res, next) {
     res.setHeader("WWW-Authenticate", 'Basic realm="Admin Panel"');
     res.end("Access denied");
   } else {
-    console.log("Authenticated successfully");
     next();
   }
 }
 
-// Middleware for serving static files and JSON requests
+// Middleware
 app.use(express.static("public"));
 app.use(express.json());
 
@@ -115,10 +106,15 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Serve the admin panel (only accessible with authentication)
+// Serve the admin panel (with authentication)
 app.get("/admin", authenticate, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
+
+// Apply authentication to admin routes
+app.use("/api/questions", authenticate);
+app.use("/api/quiz-stats", authenticate);
+app.use("/api/update-secret-key", authenticate);
 
 // API endpoint for secret key
 app.post("/api/secret-key", async (req, res) => {
