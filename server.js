@@ -5,7 +5,6 @@ const { Pool } = require("pg");
 const auth = require("basic-auth");
 
 const app = express();
-const port = 8000;
 
 // Create a new PostgreSQL connection pool
 let pool;
@@ -16,6 +15,9 @@ try {
   }
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false,
+    }
   });
   console.log("PostgreSQL connection pool created successfully");
 } catch (error) {
@@ -109,11 +111,6 @@ app.get("/", (req, res) => {
 app.get("/admin", authenticate, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
-
-// Apply authentication to admin routes
-app.use("/api/questions", authenticate);
-app.use("/api/quiz-stats", authenticate);
-app.use("/api/update-secret-key", authenticate);
 
 // API endpoint for secret key
 app.post("/api/secret-key", async (req, res) => {
@@ -260,12 +257,25 @@ app.delete("/api/questions/:id", async (req, res) => {
   }
 });
 
+app.delete("/api/admin/clear-quiz-stats", authenticate, async (req, res) => {
+  try {
+    await pool.query("DELETE FROM quiz_results");
+    console.log("Quiz statistics cleared successfully");
+    res.json({ message: "Quiz statistics cleared successfully" });
+  } catch (error) {
+    console.error("Error clearing quiz statistics:", error);
+    res
+      .status(500)
+      .json({ error: "An error occurred while clearing quiz statistics." });
+  }
+});
+
 // API endpoint to get quiz statistics
 app.get("/api/quiz-stats", async (req, res) => {
   try {
     const totalQuizzes = await pool.query("SELECT COUNT(*) FROM quiz_results");
     const averageScore = await pool.query(
-      "SELECT AVG(score) FROM quiz_results",
+      "SELECT AVG(score) / 7 AS avg FROM quiz_results",
     );
     res.json({
       totalQuizzes: parseInt(totalQuizzes.rows[0].count),
@@ -279,7 +289,5 @@ app.get("/api/quiz-stats", async (req, res) => {
   }
 });
 
-// Start the server
-app.listen(port, "0.0.0.0", () => {
-  console.log(`Server running at http://0.0.0.0:${port}`);
-});
+// Export the app for use in Vercel
+module.exports = app;
