@@ -112,7 +112,6 @@ app.get("/admin", authenticate, (req, res) => {
 });
 
 // Apply authentication to admin routes
-app.use("/api/questions", authenticate);
 app.use("/api/quiz-stats", authenticate);
 app.use("/api/update-secret-key", authenticate);
 
