@@ -2,7 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const { Pool } = require("pg");
-const auth = require("basic-auth");
+const session = require('express-session');
+const bcrypt = require('bcrypt');
 
 const app = express();
 
@@ -51,6 +52,13 @@ async function initDatabase() {
       )
     `);
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_users (
+        id SERIAL PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+      )
+    `);
+    await pool.query(`
       DELETE FROM secret_keys WHERE id != 1;
     `);
     console.log("Database initialized successfully");
@@ -82,25 +90,23 @@ initDatabase()
   .then(() => ensureCorrectSecretKey())
   .catch(console.error);
 
-// Authentication middleware
-function authenticate(req, res, next) {
-  const credentials = auth(req);
-  if (
-    !credentials ||
-    credentials.name !== "admin" ||
-    credentials.pass !== "password"
-  ) {
-    res.statusCode = 401;
-    res.setHeader("WWW-Authenticate", 'Basic realm="Admin Panel"');
-    res.end("Access denied");
-  } else {
-    next();
-  }
-}
-
 // Middleware
 app.use(express.static("public"));
 app.use(express.json());
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false
+}));
+
+// Authentication middleware
+function authenticate(req, res, next) {
+  if (req.session && req.session.authenticated) {
+    next();
+  } else {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+}
 
 // Serve the main page without authentication
 app.get("/", (req, res) => {
@@ -108,8 +114,46 @@ app.get("/", (req, res) => {
 });
 
 // Serve the admin panel with authentication
-app.get("/admin", authenticate, (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
+app.get("/admin", (req, res) => {
+  if (req.session && req.session.authenticated) {
+    res.sendFile(path.join(__dirname, "public", "admin.html"));
+  } else {
+    res.redirect("/login");
+  }
+});
+
+// Login route
+app.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const result = await pool.query("SELECT * FROM admin_users WHERE username = $1", [username]);
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      if (await bcrypt.compare(password, user.password)) {
+        req.session.authenticated = true;
+        res.json({ success: true });
+      } else {
+        res.status(401).json({ error: "Invalid credentials" });
+      }
+    } else {
+      res.status(401).json({ error: "Invalid credentials" });
+    }
+  } catch (error) {
+    console.error("Error during login:", error);
+    res.status(500).json({ error: "An error occurred during login." });
+  }
+});
+
+// Logout route
+app.post("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Error destroying session:", err);
+      res.status(500).json({ error: "An error occurred during logout." });
+    } else {
+      res.json({ success: true });
+    }
+  });
 });
 
 // API endpoint for secret key (unprotected)
