@@ -77,6 +77,7 @@ async function ensureCorrectSecretKey() {
   }
 }
 
+// Initialize the database
 initDatabase()
   .then(() => ensureCorrectSecretKey())
   .catch(console.error);
@@ -89,9 +90,7 @@ function authenticate(req, res, next) {
     credentials.name !== "admin" ||
     credentials.pass !== "password"
   ) {
-    res.statusCode = 401;
-    res.setHeader("WWW-Authenticate", 'Basic realm="Admin Panel"');
-    res.end("Access denied");
+    res.status(401).json({ error: "Unauthorized" });
   } else {
     next();
   }
@@ -112,11 +111,10 @@ app.get("/admin", authenticate, (req, res) => {
 });
 
 // Apply authentication to admin routes
-app.use("/api/quiz-stats", authenticate);
-app.use("/api/update-secret-key", authenticate);
+app.use("/api/admin", authenticate);
 
-// API endpoint for secret key
-app.post("/api/secret-key", async (req, res) => {
+// API endpoint for secret key (now protected)
+app.post("/api/admin/secret-key", async (req, res) => {
   try {
     const result = await pool.query("SELECT key FROM secret_keys WHERE id = 1");
     const secretKey = result.rows[0].key;
@@ -130,8 +128,8 @@ app.post("/api/secret-key", async (req, res) => {
   }
 });
 
-// API endpoint to update secret key
-app.post("/api/update-secret-key", authenticate, async (req, res) => {
+// API endpoint to update secret key (now protected)
+app.post("/api/admin/update-secret-key", async (req, res) => {
   try {
     const { newSecretKey } = req.body;
     if (!newSecretKey) {
@@ -150,7 +148,7 @@ app.post("/api/update-secret-key", authenticate, async (req, res) => {
   }
 });
 
-// API endpoint to store user results
+// API endpoint to store user results (no authentication required)
 app.post("/api/store-result", async (req, res) => {
   const { userId, score } = req.body;
   try {
@@ -167,7 +165,7 @@ app.post("/api/store-result", async (req, res) => {
   }
 });
 
-// API endpoint to get all questions
+// API endpoint to get all questions (no authentication required)
 app.get("/api/questions", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM questions");
@@ -180,7 +178,7 @@ app.get("/api/questions", async (req, res) => {
   }
 });
 
-// API endpoint to get a single question
+// API endpoint to get a single question (no authentication required)
 app.get("/api/questions/:id", async (req, res) => {
   const { id } = req.params;
   try {
@@ -200,8 +198,8 @@ app.get("/api/questions/:id", async (req, res) => {
   }
 });
 
-// API endpoint to add a new question
-app.post("/api/questions", async (req, res) => {
+// API endpoint to add a new question (now protected)
+app.post("/api/admin/questions", async (req, res) => {
   const { question, options, correct_answer } = req.body;
   try {
     const result = await pool.query(
@@ -217,8 +215,8 @@ app.post("/api/questions", async (req, res) => {
   }
 });
 
-// API endpoint to update a question
-app.put("/api/questions/:id", async (req, res) => {
+// API endpoint to update a question (now protected)
+app.put("/api/admin/questions/:id", async (req, res) => {
   const { id } = req.params;
   const { question, options, correct_answer } = req.body;
   try {
@@ -239,8 +237,8 @@ app.put("/api/questions/:id", async (req, res) => {
   }
 });
 
-// API endpoint to delete a question
-app.delete("/api/questions/:id", async (req, res) => {
+// API endpoint to delete a question (now protected)
+app.delete("/api/admin/questions/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
@@ -260,7 +258,7 @@ app.delete("/api/questions/:id", async (req, res) => {
   }
 });
 
-app.delete("/api/admin/clear-quiz-stats", authenticate, async (req, res) => {
+app.delete("/api/admin/clear-quiz-stats", async (req, res) => {
   try {
     await pool.query("DELETE FROM quiz_results");
     console.log("Quiz statistics cleared successfully");
