@@ -85,6 +85,13 @@ initDatabase()
 // Authentication middleware for admin
 function authenticate(req, res, next) {
   const credentials = auth(req);
+  console.log("Attempted access to /admin"); // Log each time the /admin route is accessed
+  if (!credentials) {
+    console.log("No credentials provided"); // Log if no credentials are provided
+  } else {
+    console.log(`Credentials provided: ${credentials.name}, ${credentials.pass}`); // Log the provided credentials
+  }
+
   if (
     !credentials ||
     credentials.name !== "admin" ||
@@ -94,6 +101,7 @@ function authenticate(req, res, next) {
     res.setHeader("WWW-Authenticate", 'Basic realm="Admin Panel"');
     res.end("Access denied");
   } else {
+    console.log("Authenticated successfully");
     next();
   }
 }
@@ -111,7 +119,6 @@ app.get("/", (req, res) => {
 app.get("/admin", authenticate, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
-
 
 // API endpoint for secret key
 app.post("/api/secret-key", async (req, res) => {
