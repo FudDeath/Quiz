@@ -78,6 +78,7 @@ async function ensureCorrectSecretKey() {
 }
 
 // Initialize the database
+// Initialize the database
 initDatabase()
   .then(() => ensureCorrectSecretKey())
   .catch(console.error);
@@ -107,6 +108,7 @@ app.get("/", (req, res) => {
 app.get("/admin", authenticate, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
+
 // API endpoint for secret key
 app.post("/api/secret-key", async (req, res) => {
   try {
