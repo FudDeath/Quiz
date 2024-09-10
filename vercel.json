@@ -6,11 +6,19 @@
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/server.js" },
+    
+    // Routes for HTML files
     { "src": "/admin", "dest": "/public/admin.html" },
     { "src": "/", "dest": "/public/index.html" },
-    { "src": "/(.*)", "dest": "/public/js/$1" },
-    { "src": "/(.*)", "dest": "/public/css/$1" },
-    { "src": "/(.*)", "dest": "/public/images/$1" },
-    { "src": "/static/(.*)", "dest": "/public/$1" }
+    
+    // Routes for JS files
+    { "src": "/admin.js", "dest": "/public/admin.js" },
+    { "src": "/script.js", "dest": "/public/script.js" },
+    
+    // Routes for CSS files
+    { "src": "/styles.css", "dest": "/public/styles.css" },
+    
+    // Catch-all for other static assets in public directory
+    { "src": "/public/(.*)", "dest": "/public/$1" }
   ]
 }
