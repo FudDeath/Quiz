@@ -77,10 +77,10 @@ async function ensureCorrectSecretKey() {
   }
 }
 
+// Initialize the database
 initDatabase()
   .then(() => ensureCorrectSecretKey())
   .catch(console.error);
-
 // Authentication middleware
 function authenticate(req, res, next) {
   const credentials = auth(req);
@@ -96,25 +96,17 @@ function authenticate(req, res, next) {
     next();
   }
 }
-
 // Middleware
 app.use(express.static("public"));
 app.use(express.json());
-
-// Serve the frontend
+// Serve the main page without authentication
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
-
-// Serve the admin panel (with authentication)
+// Serve the admin panel with authentication
 app.get("/admin", authenticate, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
-
-app.use("/api/questions", authenticate); // For adding, updating, and deleting questions
-app.use("/api/quiz-stats", authenticate); // For clearing quiz stats
-app.use("/api/update-secret-key", authenticate); // For updating secret keys
-
 // API endpoint for secret key
 app.post("/api/secret-key", async (req, res) => {
   try {
