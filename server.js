@@ -82,7 +82,7 @@ initDatabase()
   .then(() => ensureCorrectSecretKey())
   .catch(console.error);
 
-// Authentication middleware
+// Authentication middleware for admin
 function authenticate(req, res, next) {
   const credentials = auth(req);
   if (
@@ -98,7 +98,7 @@ function authenticate(req, res, next) {
   }
 }
 
-// Middleware
+// Middleware for serving static files and JSON requests
 app.use(express.static("public"));
 app.use(express.json());
 
@@ -107,10 +107,11 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Serve the admin panel (with authentication)
+// Serve the admin panel (only accessible with authentication)
 app.get("/admin", authenticate, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
+
 
 // API endpoint for secret key
 app.post("/api/secret-key", async (req, res) => {
