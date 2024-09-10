@@ -78,10 +78,10 @@ async function ensureCorrectSecretKey() {
 }
 
 // Initialize the database
-// Initialize the database
 initDatabase()
   .then(() => ensureCorrectSecretKey())
   .catch(console.error);
+
 // Authentication middleware
 function authenticate(req, res, next) {
   const credentials = auth(req);
@@ -97,19 +97,22 @@ function authenticate(req, res, next) {
     next();
   }
 }
+
 // Middleware
 app.use(express.static("public"));
 app.use(express.json());
+
 // Serve the main page without authentication
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
+
 // Serve the admin panel with authentication
 app.get("/admin", authenticate, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
-// API endpoint for secret key
+// API endpoint for secret key (unprotected)
 app.post("/api/secret-key", async (req, res) => {
   try {
     const result = await pool.query("SELECT key FROM secret_keys WHERE id = 1");
@@ -124,7 +127,7 @@ app.post("/api/secret-key", async (req, res) => {
   }
 });
 
-// API endpoint to update secret key
+// API endpoint to update secret key (protected)
 app.post("/api/update-secret-key", authenticate, async (req, res) => {
   try {
     const { newSecretKey } = req.body;
@@ -144,13 +147,13 @@ app.post("/api/update-secret-key", authenticate, async (req, res) => {
   }
 });
 
-// API endpoint to store user results
+// API endpoint to store user results (unprotected)
 app.post("/api/store-result", async (req, res) => {
   const { userId, score } = req.body;
   try {
     await pool.query(
       "INSERT INTO quiz_results (user_id, score) VALUES ($1, $2)",
-      [userId, score],
+      [userId, score]
     );
     res.json({ message: "Result stored successfully" });
   } catch (error) {
@@ -161,7 +164,7 @@ app.post("/api/store-result", async (req, res) => {
   }
 });
 
-// API endpoint to get all questions
+// API endpoint to get all questions (unprotected)
 app.get("/api/questions", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM questions");
@@ -174,7 +177,7 @@ app.get("/api/questions", async (req, res) => {
   }
 });
 
-// API endpoint to get a single question
+// API endpoint to get a single question (unprotected)
 app.get("/api/questions/:id", async (req, res) => {
   const { id } = req.params;
   try {
@@ -194,13 +197,13 @@ app.get("/api/questions/:id", async (req, res) => {
   }
 });
 
-// API endpoint to add a new question
-app.post("/api/questions", async (req, res) => {
+// API endpoint to add a new question (protected)
+app.post("/api/questions", authenticate, async (req, res) => {
   const { question, options, correct_answer } = req.body;
   try {
     const result = await pool.query(
       "INSERT INTO questions (question, options, correct_answer) VALUES ($1, $2, $3) RETURNING *",
-      [question, options, correct_answer],
+      [question, options, correct_answer]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -211,14 +214,14 @@ app.post("/api/questions", async (req, res) => {
   }
 });
 
-// API endpoint to update a question
-app.put("/api/questions/:id", async (req, res) => {
+// API endpoint to update a question (protected)
+app.put("/api/questions/:id", authenticate, async (req, res) => {
   const { id } = req.params;
   const { question, options, correct_answer } = req.body;
   try {
     const result = await pool.query(
       "UPDATE questions SET question = $1, options = $2, correct_answer = $3 WHERE id = $4 RETURNING *",
-      [question, options, correct_answer, id],
+      [question, options, correct_answer, id]
     );
     if (result.rows.length === 0) {
       res.status(404).json({ error: "Question not found" });
@@ -233,13 +236,13 @@ app.put("/api/questions/:id", async (req, res) => {
   }
 });
 
-// API endpoint to delete a question
-app.delete("/api/questions/:id", async (req, res) => {
+// API endpoint to delete a question (protected)
+app.delete("/api/questions/:id", authenticate, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
       "DELETE FROM questions WHERE id = $1 RETURNING *",
-      [id],
+      [id]
     );
     if (result.rows.length === 0) {
       res.status(404).json({ error: "Question not found" });
@@ -254,6 +257,7 @@ app.delete("/api/questions/:id", async (req, res) => {
   }
 });
 
+// API endpoint to clear quiz stats (protected)
 app.delete("/api/admin/clear-quiz-stats", authenticate, async (req, res) => {
   try {
     await pool.query("DELETE FROM quiz_results");
@@ -267,7 +271,7 @@ app.delete("/api/admin/clear-quiz-stats", authenticate, async (req, res) => {
   }
 });
 
-// API endpoint to get quiz statistics
+// API endpoint to get quiz statistics (unprotected)
 app.get("/api/quiz-stats", async (req, res) => {
   try {
     const totalQuizzes = await pool.query("SELECT COUNT(*) FROM quiz_results");
