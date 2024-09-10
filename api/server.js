@@ -263,7 +263,7 @@ app.get("/api/quiz-stats", async (req, res) => {
   try {
     const totalQuizzes = await pool.query("SELECT COUNT(*) FROM quiz_results");
     const averageScore = await pool.query(
-      "SELECT AVG(score) FROM quiz_results",
+      "SELECT AVG(score) / 7 AS avg FROM quiz_results"
     );
     res.json({
       totalQuizzes: parseInt(totalQuizzes.rows[0].count),
